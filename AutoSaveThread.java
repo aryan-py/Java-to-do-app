@@ -1,38 +1,53 @@
-/ AutoSaveThread.java
+// AutoSaveThread.java
 /**
- * A thread that automatically saves tasks at regular intervals.
+ * This class creates a thread that automatically saves tasks
  */
+
+// TaskComplete annotation
+import java.lang.annotation.*;
+
+
 public class AutoSaveThread extends Thread {
-    private final TaskManager taskManager;
-    private volatile boolean running = true;
-    private static final int SAVE_INTERVAL_MS = 30000;  // 30 seconds
+    private TaskManager taskManager;
+    private boolean running;
     
+    // Constructor
     public AutoSaveThread(TaskManager taskManager) {
         this.taskManager = taskManager;
-        setDaemon(true);  // Set as daemon so it doesn't prevent JVM shutdown
-        setName("AutoSaveThread");
+        this.running = true;
     }
     
-    @Override
+    // Run method that executes when the thread starts
     public void run() {
         System.out.println("Auto-save thread started");
         while (running) {
             try {
-                Thread.sleep(SAVE_INTERVAL_MS);
-                if (running) {
-                    System.out.println("Auto-saving tasks...");
-                    taskManager.saveTasks();
-                }
+                // Sleep for 30 seconds
+                Thread.sleep(30000);
+                
+                // Save tasks
+                System.out.println("Auto-saving tasks...");
+                taskManager.saveTasks();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                System.out.println("Auto-save thread interrupted");
                 break;
             }
         }
-        System.out.println("Auto-save thread stopping");
     }
     
-    public void stopRunning() {
+    // Stop the thread
+    public void stopThread() {
         this.running = false;
-        interrupt();  // Interrupt sleep
+        this.interrupt();
     }
+}
+
+
+/**
+ * Custom annotation for marking methods related to task completion
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@interface TaskComplete {
+    String value() default "Task completed";
 }
