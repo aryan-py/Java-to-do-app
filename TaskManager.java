@@ -1,175 +1,107 @@
 // TaskManager.java
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Manages the task list and provides operations like add, remove, and list tasks.
+ * This class manages the task list and handles saving/loading tasks
  */
 public class TaskManager {
-    private List<Task> tasks;
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final String dataFile = "tasks.dat";
-    private AutoSaveThread autoSaveThread;
+    private ArrayList<Task> tasks;
+    private String fileName = "tasks.dat";
     
+    // Constructor
     public TaskManager() {
-        this.tasks = new ArrayList<>();
+        tasks = new ArrayList<Task>();
         loadTasks();
-        autoSaveThread = new AutoSaveThread(this);
-        autoSaveThread.start();
+        
+        // Start the auto save thread
+        AutoSaveThread saveThread = new AutoSaveThread(this);
+        saveThread.start();
     }
     
-    /**
-     * Adds a task to the list.
-     * @param task The task to add
-     */
+    // Add a task to the list
     public void addTask(Task task) {
-        lock.writeLock().lock();
-        try {
-            tasks.add(task);
-        } finally {
-            lock.writeLock().unlock();
-        }
+        tasks.add(task);
     }
     
-    /**
-     * Removes a task at the specified index.
-     * @param index The index of the task to remove
-     * @return true if the task was removed, false if the index is invalid
-     */
+    // Remove a task from the list
     public boolean removeTask(int index) {
-        lock.writeLock().lock();
-        try {
-            if (index >= 0 && index < tasks.size()) {
-                tasks.remove(index);
-                return true;
+        if (index >= 0 && index < tasks.size()) {
+            tasks.remove(index);
+            return true;
+        }
+        return false;
+    }
+    
+    // Mark a task as completed or not completed
+    public boolean markTaskCompleted(int index, boolean completed) {
+        if (index >= 0 && index < tasks.size()) {
+            tasks.get(index).setCompleted(completed);
+            return true;
+        }
+        return false;
+    }
+    
+    // Get all tasks
+    public ArrayList<Task> getAllTasks() {
+        return tasks;
+    }
+    
+    // Get only incomplete tasks
+    public ArrayList<Task> getIncompleteTasks() {
+        ArrayList<Task> incompleteTasks = new ArrayList<Task>();
+        for (Task task : tasks) {
+            if (!task.isCompleted()) {
+                incompleteTasks.add(task);
             }
-            return false;
-        } finally {
-            lock.writeLock().unlock();
         }
+        return incompleteTasks;
     }
     
-    /**
-     * Marks a task as completed or not completed.
-     * @param index The index of the task
-     * @param completed The completion status to set
-     * @return true if the task was updated, false if the index is invalid
-     */
-    public boolean setTaskCompleted(int index, boolean completed) {
-        lock.writeLock().lock();
-        try {
-            if (index >= 0 && index < tasks.size()) {
-                tasks.get(index).setCompleted(completed);
-                return true;
+    // Get only completed tasks
+    public ArrayList<Task> getCompletedTasks() {
+        ArrayList<Task> completedTasks = new ArrayList<Task>();
+        for (Task task : tasks) {
+            if (task.isCompleted()) {
+                completedTasks.add(task);
             }
-            return false;
-        } finally {
-            lock.writeLock().unlock();
         }
+        return completedTasks;
     }
     
-    /**
-     * Gets all tasks.
-     * @return A list of all tasks
-     */
-    public List<Task> getAllTasks() {
-        lock.readLock().lock();
-        try {
-            return new ArrayList<>(tasks);
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
-    
-    /**
-     * Gets only incomplete tasks.
-     * @return A list of incomplete tasks
-     */
-    public List<Task> getIncompleteTasks() {
-        lock.readLock().lock();
-        try {
-            List<Task> incompleteTasks = new ArrayList<>();
-            for (Task task : tasks) {
-                if (!task.isCompleted()) {
-                    incompleteTasks.add(task);
-                }
-            }
-            return incompleteTasks;
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
-    
-    /**
-     * Gets only completed tasks.
-     * @return A list of completed tasks
-     */
-    public List<Task> getCompletedTasks() {
-        lock.readLock().lock();
-        try {
-            List<Task> completedTasks = new ArrayList<>();
-            for (Task task : tasks) {
-                if (task.isCompleted()) {
-                    completedTasks.add(task);
-                }
-            }
-            return completedTasks;
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
-    
-    /**
-     * Saves all tasks to a file.
-     */
+    // Save tasks to file
     public void saveTasks() {
-        lock.readLock().lock();
         try {
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dataFile))) {
-                oos.writeObject(tasks);
-                System.out.println("Tasks saved to " + dataFile);
-            } catch (IOException e) {
-                System.err.println("Error saving tasks: " + e.getMessage());
-            }
-        } finally {
-            lock.readLock().unlock();
+            FileOutputStream fileOut = new FileOutputStream(fileName);
+            ObjectOutputStream out = new ObjectOutputStream(fileOut);
+            out.writeObject(tasks);
+            out.close();
+            fileOut.close();
+            System.out.println("Tasks saved to " + fileName);
+        } catch (IOException e) {
+            System.out.println("Error saving tasks: " + e.getMessage());
         }
     }
     
-    /**
-     * Loads tasks from a file.
-     */
+    // Load tasks from file
     @SuppressWarnings("unchecked")
     private void loadTasks() {
-        File file = new File(dataFile);
+        File file = new File(fileName);
         if (!file.exists()) {
             System.out.println("No saved tasks found. Starting with an empty list.");
             return;
         }
         
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(dataFile))) {
-            tasks = (List<Task>) ois.readObject();
-            System.out.println("Loaded " + tasks.size() + " tasks from " + dataFile);
+        try {
+            FileInputStream fileIn = new FileInputStream(fileName);
+            ObjectInputStream in = new ObjectInputStream(fileIn);
+            tasks = (ArrayList<Task>) in.readObject();
+            in.close();
+            fileIn.close();
+            System.out.println("Loaded " + tasks.size() + " tasks from " + fileName);
         } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Error loading tasks: " + e.getMessage());
-            tasks = new ArrayList<>();
+            System.out.println("Error loading tasks: " + e.getMessage());
+            tasks = new ArrayList<Task>();
         }
-    }
-    
-    /**
-     * Shuts down the auto-save thread.
-     */
-    public void shutdown() {
-        if (autoSaveThread != null) {
-            autoSaveThread.stopRunning();
-            try {
-                autoSaveThread.join(2000);  // Wait for the thread to finish
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-        saveTasks();  // Final save before shutting down
     }
 }
