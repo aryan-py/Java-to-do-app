@@ -1,33 +1,28 @@
 // Task.java
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
- * Represents a task in the to-do list.
+ * This class represents a task in our to-do list
  */
 public class Task implements Serializable {
-    private static final long serialVersionUID = 1L;
-    
     private String title;
     private String description;
     private boolean completed;
-    private LocalDateTime createdAt;
-    private LocalDateTime completedAt;
-    private Priority priority;
+    private Date createdDate;
+    private Date completedDate;
+    private String priority; // "LOW", "MEDIUM", or "HIGH"
     
-    public enum Priority {
-        LOW, MEDIUM, HIGH
-    }
-    
-    public Task(String title, String description, Priority priority) {
+    // Constructor
+    public Task(String title, String description, String priority) {
         this.title = title;
         this.description = description;
         this.priority = priority;
         this.completed = false;
-        this.createdAt = LocalDateTime.now();
+        this.createdDate = new Date(); // current date and time
     }
     
+    // Getters and setters
     public String getTitle() {
         return title;
     }
@@ -51,40 +46,37 @@ public class Task implements Serializable {
     public void setCompleted(boolean completed) {
         this.completed = completed;
         if (completed) {
-            this.completedAt = LocalDateTime.now();
+            this.completedDate = new Date();
         } else {
-            this.completedAt = null;
+            this.completedDate = null;
         }
     }
     
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    
-    public LocalDateTime getCompletedAt() {
-        return completedAt;
-    }
-    
-    public Priority getPriority() {
+    public String getPriority() {
         return priority;
     }
     
-    public void setPriority(Priority priority) {
+    public void setPriority(String priority) {
         this.priority = priority;
     }
     
-    @Override
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+    
+    public Date getCompletedDate() {
+        return completedDate;
+    }
+    
+    // Override toString to display task information
     public String toString() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        String completionStatus = completed ? "✓" : "✗";
-        String completedString = completed ? " (Completed on: " + completedAt.format(formatter) + ")" : "";
+        String status = completed ? "Completed" : "Not Completed";
+        String completedString = "";
+        if (completed && completedDate != null) {
+            completedString = " (Completed on: " + completedDate + ")";
+        }
         
-        return String.format("[%s] %s - %s [Priority: %s] Created: %s%s", 
-                completionStatus,
-                title, 
-                description, 
-                priority,
-                createdAt.format(formatter),
-                completedString);
+        return title + " - " + description + " - Priority: " + priority + 
+               " - Status: " + status + " - Created: " + createdDate + completedString;
     }
 }
